@@ -1,0 +1,9 @@
+Generate a =.env= by running
+
+#+begin_src bash
+echo "AUTOMATA_WEB_PLATFORM_PEPPER=$(head -c 32 /dev/urandom | base64)" >> .env
+echo "AUTOMATA_WEB_PLATFORM_KEY=$(head -c 32 /dev/urandom | base64)" >> .env
+#+end_src
+
+The default setup creates a user =user= with password =password=. Once I have a way to reset passwords,
+please reset the default account's password to something else immediately.

@@ -1,1 +1,4 @@
 /result
+/.env
+/automata-web-platform
+/database.sqlite3
