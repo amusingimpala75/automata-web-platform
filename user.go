@@ -17,9 +17,9 @@ import (
 
 type user struct {
 	salt     [32]byte
-	username string
+	Username string
 	hash     [32]byte
-	admin    bool
+	Admin    bool
 }
 
 func createUserDatabase() error {
@@ -42,7 +42,12 @@ func logout(w http.ResponseWriter, r *http.Request) {
 		Secure:   true,
 		SameSite: http.SameSiteStrictMode,
 	})
+	goToLogin(w, r)
+}
+
+func goToLogin(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusFound)
+
 }
 
 func loginRoute(w http.ResponseWriter, r *http.Request) {
@@ -82,16 +87,16 @@ func login(w http.ResponseWriter, r *http.Request) {
 		username,
 	)
 	if err != nil || !rows.Next() {
-		w.WriteHeader(http.StatusUnauthorized)
+		goToLogin(w, r)
 		return
 	}
 
-	user := user{username: username}
+	user := user{Username: username}
 	var (
 		hash []byte
 		salt []byte
 	)
-	err = rows.Scan(&salt, &hash, &user.admin)
+	err = rows.Scan(&salt, &hash, &user.Admin)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -100,7 +105,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 	copy(user.salt[:], salt[0:32])
 
 	if !user.validate(password) {
-		w.WriteHeader(http.StatusUnauthorized)
+		goToLogin(w, r)
 		return
 	}
 
@@ -108,9 +113,10 @@ func login(w http.ResponseWriter, r *http.Request) {
 	oneDay, _ := time.ParseDuration("24h")
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user": username,
-		"iat":  now.Unix(),
-		"exp":  now.Add(oneDay).Unix(),
+		"user":  username,
+		"admin": user.Admin,
+		"iat":   now.Unix(),
+		"exp":   now.Add(oneDay).Unix(),
 	})
 
 	key, err := getJwtKey()
@@ -137,7 +143,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/home", http.StatusFound)
 }
 
-func authenticatedPage(route func(http.ResponseWriter, *http.Request, string)) func(http.ResponseWriter, *http.Request) {
+func authenticatedPage(route func(http.ResponseWriter, *http.Request, user)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("jwt")
 		if err != nil {
@@ -163,11 +169,96 @@ func authenticatedPage(route func(http.ResponseWriter, *http.Request, string)) f
 		if claims, ok := t.Claims.(jwt.MapClaims); !ok {
 			logout(w, r)
 			return
-		} else if user, ok := claims["user"]; !ok {
+		} else if username, ok := claims["user"]; !ok {
+			logout(w, r)
+			return
+
+		} else if admin, ok := claims["admin"]; !ok {
 			logout(w, r)
 			return
 		} else {
-			route(w, r, user.(string))
+			route(w, r, user{
+				Username: username.(string),
+				Admin:    admin.(bool),
+			})
+		}
+	}
+}
+
+func adminPage(route func(http.ResponseWriter, *http.Request, user)) func(http.ResponseWriter, *http.Request) {
+	return authenticatedPage(func(w http.ResponseWriter, r *http.Request, user user) {
+		if !user.Admin {
+			http.Redirect(w, r, "/home", http.StatusFound)
+			return
+		}
+		route(w, r, user)
+	})
+}
+
+func updatePassword(w http.ResponseWriter, r *http.Request, user user) {
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	newPassword := r.FormValue("password")
+
+	pepper, err := getPepper()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		logger.Error("could not fetch pepper")
+		return
+	}
+
+	db, err := openDB()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		logger.Error("could not open database")
+		return
+	}
+
+	err = user.fetchSalt()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		logger.Error("could not fetch user's salt")
+		return
+	}
+
+	hash, err := hash(newPassword, user.salt, *pepper)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		logger.Error("could not hash new password")
+		return
+	}
+
+	affected, err := db.Exec(
+		"UPDATE users SET hash = $1 WHERE username = $2",
+		hash[:],
+		user.Username,
+	)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		logger.Error("could not update database with new password: ", err.Error(), "")
+		return
+	}
+
+	rows, err := affected.RowsAffected()
+	if err != nil || rows != 1 {
+		w.WriteHeader(http.StatusInternalServerError)
+		logger.Error("Should have affected 1 row in password update")
+		return
+	}
+
+	http.Redirect(w, r, "/home", http.StatusFound)
+}
+
+func addUserRoute(w http.ResponseWriter, r *http.Request, _ user) {
+	if r.Method == "POST" {
+		err := addUser(r.FormValue("username"), r.FormValue("password"))
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+		} else {
+			http.Redirect(w, r, "/home", http.StatusFound)
 		}
 	}
 }
@@ -193,9 +284,9 @@ func addUser(username string, password string) error {
 
 	user := user{
 		salt:     salt,
-		username: username,
+		Username: username,
 		hash:     *hash,
-		admin:    false,
+		Admin:    false,
 	}
 
 	db, err := openDB()
@@ -207,8 +298,8 @@ func addUser(username string, password string) error {
 		"INSERT INTO users (hash, salt, username, admin) values ($1, $2, $3, $4)",
 		user.hash[:],
 		user.salt[:],
-		user.username,
-		user.admin,
+		user.Username,
+		user.Admin,
 	)
 
 	return err
@@ -234,6 +325,31 @@ func (u user) validate(password string) bool {
 	guess := *guessPtr
 
 	return err == nil && subtle.ConstantTimeCompare(u.hash[:], guess[:]) == 1
+}
+
+func (u *user) fetchSalt() error {
+	db, err := openDB()
+	if err != nil {
+		return err
+	}
+
+	rows, err := db.Query("SELECT salt FROM users WHERE username = $1", u.Username)
+	if err != nil {
+		return err
+	} else if !rows.Next() {
+		return errors.New("cannot find row")
+	}
+
+	var buf []byte
+
+	err = rows.Scan(&buf)
+	if err != nil {
+		return err
+	}
+
+	copy(u.salt[:], buf[0:32])
+
+	return nil
 }
 
 func getPepper() (*[32]byte, error) {

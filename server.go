@@ -3,28 +3,30 @@ package main
 import (
 	"html/template"
 	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/joho/godotenv"
 )
 
-func home(w http.ResponseWriter, r *http.Request, user string) {
+func home(w http.ResponseWriter, r *http.Request, user user) {
 	text, err := f.ReadFile("templates/home.gohtml")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	tmpl, err := template.New("login").Parse(string(text))
+	tmpl, err := template.New("home").Parse(string(text))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	err = tmpl.Execute(w, map[string]string{
-		"user": user,
-	})
+	err = tmpl.Execute(w, user)
 }
 
+var logger *slog.Logger
+
 func main() {
+	logger = slog.Default()
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("could not load .env files")
@@ -33,7 +35,7 @@ func main() {
 	if createUserDatabase() != nil {
 		log.Fatal("could not ensure users table exists")
 	}
-	err = addUser("user", "password")
+	err = addUser("admin", "admin")
 	if err != nil {
 		log.Println("[warn] could not add default user: ", err.Error())
 	}
@@ -42,6 +44,8 @@ func main() {
 	mux.HandleFunc("/login", loginRoute)
 	mux.HandleFunc("/home", authenticatedPage(home))
 	mux.HandleFunc("/logout", logout)
+	mux.HandleFunc("/user", adminPage(addUserRoute))
+	mux.HandleFunc("/password", authenticatedPage(updatePassword))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/home", http.StatusFound)
 	})

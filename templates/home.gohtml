@@ -5,10 +5,28 @@
   </head>
   <body>
     <h1>
-      Welcome, {{ .user }}
+      Welcome, {{ .Username }}
     </h1>
+
     <form action="/logout">
       <input type="submit" value="Logout">
     </form>
+
+    <form action="/password" method="POST">
+      <label>Password</label>
+      <input type="password" name="password" />
+      <input type="submit" value="Update password" />
+    </form>
+
+    {{ if .Admin }}
+    <form action="/user" method="POST">
+      <label>Username</label>
+      <input type="text" name="username" />
+      <label>Password</label>
+      <input type="password" name="password" />
+      <input type="submit" value="Add User" />
+    </form>
+    {{ end }}
+
   </body>
 </html>
