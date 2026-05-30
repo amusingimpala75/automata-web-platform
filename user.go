@@ -5,13 +5,10 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"errors"
-	"html/template"
-	"log"
+	"fmt"
 	"net/http"
 	"os"
-	"time"
 
-	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/argon2"
 )
 
@@ -20,6 +17,21 @@ type user struct {
 	Username string
 	hash     [32]byte
 	Admin    bool
+}
+
+func registerUserRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("/user", adminPage(func(w http.ResponseWriter, r *http.Request, u user) {
+		switch r.Method {
+		case "POST":
+			err := addUser(r.FormValue("username"), r.FormValue("password"))
+			if err != nil {
+				httpErrorLog(w, "could not add user", err)
+			} else {
+				http.Redirect(w, r, "/home", http.StatusFound)
+			}
+		}
+	}))
+	mux.HandleFunc("/password", authenticatedPage(updatePassword))
 }
 
 func createUserDatabase() error {
@@ -33,168 +45,6 @@ func createUserDatabase() error {
 	return err
 }
 
-func logout(w http.ResponseWriter, r *http.Request) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     "jwt",
-		Path:     "/",
-		MaxAge:   -1,
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteStrictMode,
-	})
-	goToLogin(w, r)
-}
-
-func goToLogin(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/login", http.StatusFound)
-
-}
-
-func loginRoute(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "POST" {
-		login(w, r)
-	} else {
-		loginPage(w, r)
-	}
-}
-
-func loginPage(w http.ResponseWriter, _ *http.Request) {
-	text, err := f.ReadFile("templates/login.gohtml")
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	tmpl, err := template.New("login").Parse(string(text))
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	err = tmpl.Execute(w, map[string]string{})
-}
-
-func login(w http.ResponseWriter, r *http.Request) {
-	username := r.FormValue("username")
-	password := r.FormValue("password")
-
-	db, err := openDB()
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	rows, err := db.Query(
-		"SELECT salt, hash, admin FROM users WHERE username = $1",
-		username,
-	)
-	if err != nil || !rows.Next() {
-		goToLogin(w, r)
-		return
-	}
-
-	user := user{Username: username}
-	var (
-		hash []byte
-		salt []byte
-	)
-	err = rows.Scan(&salt, &hash, &user.Admin)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	copy(user.hash[:], hash[0:32])
-	copy(user.salt[:], salt[0:32])
-
-	if !user.validate(password) {
-		goToLogin(w, r)
-		return
-	}
-
-	now := time.Now()
-	oneDay, _ := time.ParseDuration("24h")
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user":  username,
-		"admin": user.Admin,
-		"iat":   now.Unix(),
-		"exp":   now.Add(oneDay).Unix(),
-	})
-
-	key, err := getJwtKey()
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	tokString, err := token.SignedString(key[:])
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     "jwt",
-		Value:    tokString,
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteStrictMode,
-		Expires:  time.Now().Add(oneDay),
-		Path:     "/",
-	})
-	http.Redirect(w, r, "/home", http.StatusFound)
-}
-
-func authenticatedPage(route func(http.ResponseWriter, *http.Request, user)) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie("jwt")
-		if err != nil {
-			logout(w, r)
-			return
-		}
-
-		t, err := jwt.Parse(cookie.Value, func(token *jwt.Token) (any, error) {
-			if token.Method != jwt.SigningMethodHS256 {
-				return nil, errors.New("bad signing method")
-			}
-			key, err := getJwtKey()
-			if err != nil {
-				return nil, err
-			}
-			return key[:], nil
-		})
-		if err != nil || !t.Valid {
-			logout(w, r)
-			return
-		}
-
-		if claims, ok := t.Claims.(jwt.MapClaims); !ok {
-			logout(w, r)
-			return
-		} else if username, ok := claims["user"]; !ok {
-			logout(w, r)
-			return
-
-		} else if admin, ok := claims["admin"]; !ok {
-			logout(w, r)
-			return
-		} else {
-			route(w, r, user{
-				Username: username.(string),
-				Admin:    admin.(bool),
-			})
-		}
-	}
-}
-
-func adminPage(route func(http.ResponseWriter, *http.Request, user)) func(http.ResponseWriter, *http.Request) {
-	return authenticatedPage(func(w http.ResponseWriter, r *http.Request, user user) {
-		if !user.Admin {
-			http.Redirect(w, r, "/home", http.StatusFound)
-			return
-		}
-		route(w, r, user)
-	})
-}
-
 func updatePassword(w http.ResponseWriter, r *http.Request, user user) {
 	if r.Method != "POST" {
 		w.WriteHeader(http.StatusNotFound)
@@ -205,29 +55,25 @@ func updatePassword(w http.ResponseWriter, r *http.Request, user user) {
 
 	pepper, err := getPepper()
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		logger.Error("could not fetch pepper")
+		httpErrorLog(w, "could not fetch pepper", err)
 		return
 	}
 
 	db, err := openDB()
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		logger.Error("could not open database")
+		httpErrorLog(w, "could not open database", err)
 		return
 	}
 
 	err = user.fetchSalt()
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		logger.Error("could not fetch user's salt")
+		httpErrorLog(w, "could not fetch user's salt", err)
 		return
 	}
 
 	hash, err := hash(newPassword, user.salt, *pepper)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		logger.Error("could not hash new password")
+		httpErrorLog(w, "could not hash new password", err)
 		return
 	}
 
@@ -237,34 +83,21 @@ func updatePassword(w http.ResponseWriter, r *http.Request, user user) {
 		user.Username,
 	)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		logger.Error("could not update database with new password: ", err.Error(), "")
+		httpErrorLog(w, "could not update database with new password", err)
 		return
 	}
 
 	rows, err := affected.RowsAffected()
 	if err != nil || rows != 1 {
-		w.WriteHeader(http.StatusInternalServerError)
-		logger.Error("Should have affected 1 row in password update")
+		httpErrorLog(w, "should have modified exactly 1 row in database", err)
 		return
 	}
 
 	http.Redirect(w, r, "/home", http.StatusFound)
 }
 
-func addUserRoute(w http.ResponseWriter, r *http.Request, _ user) {
-	if r.Method == "POST" {
-		err := addUser(r.FormValue("username"), r.FormValue("password"))
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-		} else {
-			http.Redirect(w, r, "/home", http.StatusFound)
-		}
-	}
-}
-
 func addUser(username string, password string) error {
-	log.Printf("adding user %s\n", username)
+	logger.Info(fmt.Sprintln("adding user", username))
 
 	var salt [32]byte
 	n, err := rand.Read(salt[:])
