@@ -5,7 +5,7 @@
   </head>
   <body>
     <h1>
-      Welcome, {{ .Username }}
+      Welcome, {{ .me.Username }}
     </h1>
 
     <form action="/auth" method="POST">
@@ -19,7 +19,7 @@
       <input type="submit" value="Update password" />
     </form>
 
-    {{ if .Admin }}
+    {{ if .me.Admin }}
     <form action="/user" method="POST">
       <label>Username</label>
       <input type="text" name="username" />
@@ -27,6 +27,19 @@
       <input type="password" name="password" />
       <input type="submit" value="Add User" />
     </form>
+
+    <h3>Students</h3>
+
+    {{ range .users }}
+    {{ if not .Admin }}
+
+    <form action="/user/{{ .Username }}" method="POST">
+      <label>{{ .Username }}</label>
+      <input type="submit" value="Delete user">
+    </form>
+
+    {{ end }}
+    {{ end }}
     {{ end }}
 
   </body>

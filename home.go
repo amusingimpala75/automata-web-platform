@@ -23,5 +23,18 @@ func home(w http.ResponseWriter, r *http.Request, user user) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	err = tmpl.Execute(w, user)
+
+	users, err := getUsers()
+	if err != nil {
+		httpErrorLog(w, "could not fetch users", err)
+	}
+
+	err = tmpl.Execute(w, map[string]any{
+		"me":    user,
+		"users": users,
+	})
+
+	if err != nil {
+		httpErrorLog(w, "error templating home page", err)
+	}
 }

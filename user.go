@@ -31,6 +31,17 @@ func registerUserRoutes(mux *http.ServeMux) {
 			}
 		}
 	}))
+	mux.HandleFunc("/user/{id}", adminPage(func(w http.ResponseWriter, r *http.Request, u user) {
+		switch r.Method {
+		case "POST":
+			err := deleteUser(r.PathValue("id"))
+			if err != nil {
+				httpErrorLog(w, "could not remove user", err)
+			} else {
+				http.Redirect(w, r, "/home", http.StatusFound)
+			}
+		}
+	}))
 	mux.HandleFunc("/password", authenticatedPage(updatePassword))
 }
 
@@ -136,6 +147,47 @@ func addUser(username string, password string) error {
 	)
 
 	return err
+}
+
+func deleteUser(username string) error {
+	db, err := openDB()
+	if err != nil {
+		return err
+	}
+
+	res, err := db.Exec("DELETE FROM users WHERE username = $1", username)
+	if err != nil {
+		return err
+	} else if i, err := res.RowsAffected(); err != nil || i != 1 {
+		return err
+	}
+
+	return nil
+}
+
+func getUsers() ([]user, error) {
+	db, err := openDB()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := db.Query("SELECT username, admin from USERS")
+	if err != nil {
+		return nil, err
+	}
+
+	var users []user
+
+	for rows.Next() {
+		var u user
+		err := rows.Scan(&u.Username, &u.Admin)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+
+	return users, nil
 }
 
 func hash(password string, salt [32]byte, pepper [32]byte) (*[32]byte, error) {
