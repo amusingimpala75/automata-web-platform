@@ -14,9 +14,11 @@ func registerAuthRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/auth", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "POST":
-			login(w, r)
-		case "GET": // This really should be DELETE but HTML forms can't do delete
-			logout(w, r)
+			if r.Form.Has("delete") {
+				logout(w, r)
+			} else {
+				login(w, r)
+			}
 		}
 	})
 

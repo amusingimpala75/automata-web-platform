@@ -8,7 +8,8 @@
       Welcome, {{ .Username }}
     </h1>
 
-    <form action="/auth" method="GET">
+    <form action="/auth" method="POST">
+      <input type="hidden" name="delete">
       <input type="submit" value="Logout">
     </form>
 
