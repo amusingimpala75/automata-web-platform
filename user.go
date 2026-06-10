@@ -43,6 +43,9 @@ func registerUserRoutes(mux *http.ServeMux) {
 		}
 	}))
 	mux.HandleFunc("/password", authenticatedPage(updatePassword))
+	mux.HandleFunc("/user/password", adminPage(func(w http.ResponseWriter, r *http.Request, u user) {
+		updatePassword(w, r, user{Username: r.FormValue("username")})
+	}))
 }
 
 func createUserDatabase() error {

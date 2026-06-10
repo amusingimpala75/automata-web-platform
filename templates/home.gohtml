@@ -13,19 +13,30 @@
       <input type="submit" value="Logout">
     </form>
 
+    <h4>Update my password</h4>
     <form action="/password" method="POST">
       <label>Password</label>
       <input type="password" name="password" />
-      <input type="submit" value="Update password" />
+      <input type="submit" value="Update" />
     </form>
 
     {{ if .me.Admin }}
+    <h4>Add User</h4>
     <form action="/user" method="POST">
       <label>Username</label>
       <input type="text" name="username" />
       <label>Password</label>
       <input type="password" name="password" />
-      <input type="submit" value="Add User" />
+      <input type="submit" value="Add" />
+    </form>
+
+    <h4>Update User's password</h4>
+    <form action="/user/password" method="POST">
+      <label>Username</label>
+      <input type="text" name="username" />
+      <label>Password</label>
+      <input type="password" name="password" />
+      <input type="submit" value="Reset" />
     </form>
 
     <h3>Students</h3>

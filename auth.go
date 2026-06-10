@@ -46,6 +46,11 @@ func login(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
 	password := r.FormValue("password")
 
+	if username == "" {
+		goToLogin(w, r)
+		return
+	}
+
 	db, err := openDB()
 	if err != nil {
 		httpErrorLog(w, "could not open database", err)
