@@ -149,6 +149,21 @@ func addUser(username string, password string) error {
 	return err
 }
 
+// This should not be exposed by an API endpoint
+func makeAdmin(username string) error {
+	db, err := openDB()
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(
+		"UPDATE users SET admin = true WHERE username = $1",
+		username,
+	)
+
+	return err
+}
+
 func deleteUser(username string) error {
 	db, err := openDB()
 	if err != nil {

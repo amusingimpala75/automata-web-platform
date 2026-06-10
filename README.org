@@ -1,8 +1,12 @@
-Generate a =.env= by running
+* Usage
+
+Upon first run, the system will generate the =.env= as well as the default administrator user.
+
+If you already have a =.env= for some reason, you can add to it like so:
 
 #+begin_src bash
 echo "AUTOMATA_WEB_PLATFORM_PEPPER=$(head -c 32 /dev/urandom | base64)" >> .env
 echo "AUTOMATA_WEB_PLATFORM_KEY=$(head -c 32 /dev/urandom | base64)" >> .env
 #+end_src
 
-The default setup creates a user =admin= with password =admin=. Please reset this immediately. Additionally, you will probably want to elevate the admin to actual admin privileges, use =sqlite3= to do that (=UPDATE users SET admin = 1 WHERE username = "admin"=)
+The default setup creates a user =administrator= with password =administrator=. Please reset this immediately.
