@@ -29,6 +29,7 @@
 
           devShells.default = pkgs.mkShell {
             inputsFrom = [ self'.packages.default ];
+            packages = [ pkgs.air ];
           };
         };
     };

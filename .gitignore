@@ -2,3 +2,4 @@
 /.env
 /automata-web-platform
 /database.sqlite3
+/tmp
