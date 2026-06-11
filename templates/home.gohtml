@@ -15,46 +15,7 @@
       <input class="button button-secondary" type="submit" value="Logout">
     </form>
 
-    <h4>Update my password</h4>
-    <form class="card-form" action="/password" method="POST">
-      <label>Password</label>
-      <input type="password" name="password" />
-      <input class="button" type="submit" value="Update" />
-    </form>
-
-    {{ if .me.Admin }}
-    <h4>Add User</h4>
-    <form class="card-form" action="/user" method="POST">
-      <label>Username</label>
-      <input type="text" name="username" />
-      <label>Password</label>
-      <input type="password" name="password" />
-      <input class="button" type="submit" value="Add" />
-    </form>
-
-    <h4>Update User's password</h4>
-    <form class="card-form" action="/user/password" method="POST">
-      <label>Username</label>
-      <input type="text" name="username" />
-      <label>Password</label>
-      <input type="password" name="password" />
-      <input class="button" type="submit" value="Reset" />
-    </form>
-
-    <h3>Students</h3>
-
-    {{ range .users }}
-    {{ if not .Admin }}
-
-    <form class="card-form list-row" action="/user/{{ .Username }}" method="POST">
-      <label class="item-title">{{ .Username }}</label>
-      <input class="button button-danger" type="submit" value="Delete user" />
-    </form>
-
-    {{ end }}
-    {{ end }}
-    {{ end }}
-
+    <!-- Adding / Editing / Viewing assignments -->
     <h3>Assignments</h3>
     {{ range .assignments }}
     <form class="card-form assignment-row" action="/assignment/{{.id}}" method="GET">
@@ -73,6 +34,46 @@
       <input class="button" type="submit" value="Create" />
     </form>
     {{ end }}
+
+    <!-- Admin stuff: adding, deleting, resetting student passwords -->
+    {{ if .me.Admin }}
+
+    <h3>Students</h3>
+    {{ range .users }}
+    {{ if not .Admin }}
+    <form class="card-form list-row" action="/user/{{ .Username }}" method="POST">
+      <label class="item-title">{{ .Username }}</label>
+      <input class="button button-danger" type="submit" value="Delete user" />
+    </form>
+    {{ end }}
+    {{ end }}
+
+    <h4>Add student</h4>
+    <form class="card-form" action="/user" method="POST">
+      <label>Username</label>
+      <input type="text" name="username" />
+      <label>Password</label>
+      <input type="password" name="password" />
+      <input class="button" type="submit" value="Add" />
+    </form>
+
+    <h4>Update a students's password</h4>
+    <form class="card-form" action="/user/password" method="POST">
+      <label>Username</label>
+      <input type="text" name="username" />
+      <label>Password</label>
+      <input type="password" name="password" />
+      <input class="button" type="submit" value="Reset" />
+    </form>
+
+    {{ end }}
+
+    <h4>Update my password</h4>
+    <form class="card-form" action="/password" method="POST">
+      <label>Password</label>
+      <input type="password" name="password" />
+      <input class="button" type="submit" value="Update" />
+    </form>
 
   </body>
 </html>
