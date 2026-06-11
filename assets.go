@@ -4,9 +4,11 @@ import (
 	"embed"
 	"fmt"
 	"html/template"
+	"net/http"
 )
 
 //go:embed templates
+//go:embed static
 var f embed.FS
 
 func getTemplate(name string) (*template.Template, error) {
@@ -21,4 +23,9 @@ func getTemplate(name string) (*template.Template, error) {
 	}
 
 	return tmpl, nil
+}
+
+func registerStaticRoute(mux *http.ServeMux) {
+	fs := http.FileServer(http.FS(f))
+	mux.Handle("/static/", fs)
 }

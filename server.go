@@ -33,6 +33,7 @@ func main() {
 	registerHealthRoute(mux)
 	registerUserRoutes(mux)
 	registerAssignmentRoutes(mux)
+	registerStaticRoute(mux)
 
 	log.Fatal(http.ListenAndServe(":5050", http.NewCrossOriginProtection().Handler(mux)))
 }

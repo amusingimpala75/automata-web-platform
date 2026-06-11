@@ -1,42 +1,44 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Automata Web Platform</title>
+    <link rel="stylesheet" href="/static/style.css">
   </head>
-  <body>
+  <body class="page page-home">
     <h1>
       Welcome, {{ .me.Username }}
     </h1>
 
-    <form action="/auth" method="POST">
+    <form class="logout-form" action="/auth" method="POST">
       <input type="hidden" name="delete">
-      <input type="submit" value="Logout">
+      <input class="button button-secondary" type="submit" value="Logout">
     </form>
 
     <h4>Update my password</h4>
-    <form action="/password" method="POST">
+    <form class="card-form" action="/password" method="POST">
       <label>Password</label>
       <input type="password" name="password" />
-      <input type="submit" value="Update" />
+      <input class="button" type="submit" value="Update" />
     </form>
 
     {{ if .me.Admin }}
     <h4>Add User</h4>
-    <form action="/user" method="POST">
+    <form class="card-form" action="/user" method="POST">
       <label>Username</label>
       <input type="text" name="username" />
       <label>Password</label>
       <input type="password" name="password" />
-      <input type="submit" value="Add" />
+      <input class="button" type="submit" value="Add" />
     </form>
 
     <h4>Update User's password</h4>
-    <form action="/user/password" method="POST">
+    <form class="card-form" action="/user/password" method="POST">
       <label>Username</label>
       <input type="text" name="username" />
       <label>Password</label>
       <input type="password" name="password" />
-      <input type="submit" value="Reset" />
+      <input class="button" type="submit" value="Reset" />
     </form>
 
     <h3>Students</h3>
@@ -44,9 +46,9 @@
     {{ range .users }}
     {{ if not .Admin }}
 
-    <form action="/user/{{ .Username }}" method="POST">
-      <label>{{ .Username }}</label>
-      <input type="submit" value="Delete user" />
+    <form class="card-form list-row" action="/user/{{ .Username }}" method="POST">
+      <label class="item-title">{{ .Username }}</label>
+      <input class="button button-danger" type="submit" value="Delete user" />
     </form>
 
     {{ end }}
@@ -55,20 +57,20 @@
 
     <h3>Assignments</h3>
     {{ range .assignments }}
-    <form action="/assignment/{{.id}}" method="GET">
-      <label>{{.name}}</label>
+    <form class="card-form assignment-row" action="/assignment/{{.id}}" method="GET">
+      <label class="item-title">{{.name}}</label>
       <label>Starts on</label>
       <input type="datetime-local" value="{{.start}}" disabled />
       <label>Ends on</label>
       <input type="datetime-local" value="{{.end}}" disabled />
-      <input type="submit" value="View" />
+      <input class="button" type="submit" value="View" />
     </form>
     {{ end }}
 
     {{ if .me.Admin }}
-    <form action="/assignment/-1" method="GET">
-      <label>Create an assignment</label>
-      <input type="submit" value="Create" />
+    <form class="card-form create-row" action="/assignment/-1" method="GET">
+      <label class="item-title">Create an assignment</label>
+      <input class="button" type="submit" value="Create" />
     </form>
     {{ end }}
 
