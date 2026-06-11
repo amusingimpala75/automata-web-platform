@@ -46,11 +46,30 @@
 
     <form action="/user/{{ .Username }}" method="POST">
       <label>{{ .Username }}</label>
-      <input type="submit" value="Delete user">
+      <input type="submit" value="Delete user" />
     </form>
 
     {{ end }}
     {{ end }}
+    {{ end }}
+
+    <h3>Assignments</h3>
+    {{ range .assignments }}
+    <form action="/assignment/{{.id}}" method="GET">
+      <label>{{.name}}</label>
+      <label>Starts on</label>
+      <input type="datetime-local" value="{{.start}}" disabled />
+      <label>Ends on</label>
+      <input type="datetime-local" value="{{.end}}" disabled />
+      <input type="submit" value="View" />
+    </form>
+    {{ end }}
+
+    {{ if .me.Admin }}
+    <form action="/assignment/-1" method="GET">
+      <label>Create an assignment</label>
+      <input type="submit" value="Create" />
+    </form>
     {{ end }}
 
   </body>

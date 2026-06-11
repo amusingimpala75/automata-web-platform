@@ -32,6 +32,7 @@ func main() {
 	registerHomeRoutes(mux)
 	registerHealthRoute(mux)
 	registerUserRoutes(mux)
+	registerAssignmentRoutes(mux)
 
 	log.Fatal(http.ListenAndServe(":5050", http.NewCrossOriginProtection().Handler(mux)))
 }
@@ -76,7 +77,7 @@ AUTOMATA_WEB_PLATFORM_PEPPER={{ .pepper }}
 		log.Fatal("error reading .env file: ", err.Error())
 	}
 
-	if err := createUserDatabase(); err != nil {
+	if err := createUserTable(); err != nil {
 		log.Fatal("could not create users table: ", err.Error())
 	}
 
@@ -85,6 +86,10 @@ AUTOMATA_WEB_PLATFORM_PEPPER={{ .pepper }}
 	}
 	if err := makeAdmin("administrator"); err != nil {
 		log.Fatal("could not promote the default user to admin: ", err.Error())
+	}
+
+	if err := createAssignmentTable(); err != nil {
+		log.Fatal("could not create assignment table: ", err.Error())
 	}
 
 	logger.Info("Created default administrator account with password administrator")

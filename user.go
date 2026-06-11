@@ -48,13 +48,13 @@ func registerUserRoutes(mux *http.ServeMux) {
 	}))
 }
 
-func createUserDatabase() error {
+func createUserTable() error {
 	db, err := openDB()
 	if err != nil {
 		return err
 	}
 	_, err = db.Exec(
-		"CREATE TABLE IF NOT EXISTS users (id INT PRIMARY KEY, username TEXT UNIQUE NOT NULL, salt BLOB NOT NULL, hash BLOB NOT NULL, admin BOOL)",
+		"CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT UNIQUE NOT NULL, salt BLOB NOT NULL, hash BLOB NOT NULL, admin BOOL)",
 	)
 	return err
 }

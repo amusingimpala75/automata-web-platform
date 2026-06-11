@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Automata Web Platform</title>
+  </head>
+  <body>
+    <h1>
+      {{if .new}}Create an assignment{{else}}Editing {{ .assignment.name }}{{end}}
+    </h1>
+
+    <form action="/assignment/{{if .new}}-1{{else}}{{.assignment.id}}{{end}}" method="POST">
+      <label>Name</label>
+      <input type="text" name="name" value="{{if not .new}}{{.assignment.name}}{{end}}" />
+      <label>Start</label>
+      <input type="datetime-local" name="start" value="{{if not .new}}{{.assignment.start}}{{end}}" />
+      <label>End</label>
+      <input type="datetime-local" name="end" value="{{if not .new}}{{.assignment.end}}{{end}}" />
+      <input type="submit" value="Update">
+    </form>
+  </body>
+</html>
