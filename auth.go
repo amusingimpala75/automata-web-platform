@@ -34,7 +34,7 @@ func logout(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   r.TLS != nil,
 		SameSite: http.SameSiteStrictMode,
 	})
 
@@ -113,7 +113,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 		Name:     "jwt",
 		Value:    tokString,
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   r.TLS != nil,
 		SameSite: http.SameSiteStrictMode,
 		Expires:  time.Now().Add(oneDay),
 		Path:     "/",
