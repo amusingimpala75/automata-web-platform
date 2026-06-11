@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"html/template"
 	"net/http"
 	"time"
 
@@ -123,14 +122,9 @@ func login(w http.ResponseWriter, r *http.Request) {
 }
 
 func loginPage(w http.ResponseWriter, _ *http.Request) {
-	text, err := f.ReadFile("templates/login.gohtml")
+	tmpl, err := getTemplate("login")
 	if err != nil {
-		httpErrorLog(w, "could not read login template", err)
-		return
-	}
-	tmpl, err := template.New("login").Parse(string(text))
-	if err != nil {
-		httpErrorLog(w, "could not properly parse login template", err)
+		httpErrorLog(w, "could not get template", err)
 		return
 	}
 	err = tmpl.Execute(w, map[string]string{})
